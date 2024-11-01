@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "checkbin"
+dynamic = ["version"]
+description = 'Visualization SDK'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Jay Swanson", email = "jay@synth.inc" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "opencv-python",
+  "numpy",
+  "torch",
+  "requests",
+  "boto3",
+  "azure-storage-blob",
+  "azure-storage-file-datalake",
+  "google-cloud-storage",
+  "fastapi",
+  "tinydb",
+]
+
+[project.urls]
+Documentation = "https://github.com/checkbins/checkbin-python#readme"
+Issues = "https://github.com/checkbins/checkbin-python/issues"
+Source = "https://github.com/checkbins/checkbin-python"
+
+[project.scripts]
+checkbin = "checkbin.cli:main"
+
+[tool.hatch.version]
+path = "src/checkbin/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/checkbin tests}"
+
+[tool.coverage.run]
+source_pkgs = ["checkbin", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/checkbin/__about__.py",
+]
+
+[tool.coverage.paths]
+checkbin = ["src/checkbin", "*/checkbin/src/checkbin"]
+tests = ["tests", "*/checkbin/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
