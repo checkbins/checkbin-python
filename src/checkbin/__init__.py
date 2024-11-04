@@ -109,6 +109,7 @@ class FileUploader:
         extension: str,
         file: BufferedReader,
         run_id: Optional[str] = None,
+        set_id: Optional[str] = None,
     ):
         if self.mode == "local":
             raise Exception("Checkbin file hosting is not available in local mode")
@@ -127,6 +128,7 @@ class FileUploader:
                 "filename": filename,
                 "size": size,
                 "runId": run_id,
+                "setId": set_id,
             },
             timeout=30,
         )
@@ -186,6 +188,7 @@ class Checkin:
         file_uploader: FileUploader,
         name: str,
         run_id: Optional[str] = None,
+        set_id: Optional[str] = None,
     ):
         self.file_uploader = file_uploader
         self.name = name
@@ -193,6 +196,7 @@ class Checkin:
         self.state = None
         self.files = None
         self.run_id = run_id
+        self.set_id = set_id
 
     @classmethod
     def from_dict(cls, file_uploader: FileUploader, name: str, data: dict[str, Any]):
@@ -283,7 +287,7 @@ class Checkin:
                 url = self.file_uploader.upload_file_gcp(container, extension, file)
             else:
                 url = self.file_uploader.upload_file_checkbin(
-                    extension, file, self.run_id
+                    extension, file, self.run_id, self.set_id
                 )
             print(f"Checkbin: recording file upload time: {time.time() - start_time}")
             print(f"Checkbin: recorded file: {url}")
@@ -527,7 +531,19 @@ class InputSet:
         self.file_uploader = file_uploader
         self.name = name
         self.checkins: list[Checkin] = []
-        self.set_id = None
+        set_response = requests.post(
+            f"{self.base_url}/set",
+            headers=get_headers(),
+            json={
+                "appKey": self.app_key,
+                "name": self.name,
+                "isInput": True,
+            },
+            timeout=30,
+        )
+        handle_http_error(set_response)
+        set_data = json.loads(set_response.content)
+        self.set_id = set_data["id"]
 
     def add_input(self):
         checkin = Checkin(self.file_uploader, "Input")
@@ -573,23 +589,16 @@ class InputSet:
         return self.submit()
 
     def submit(self):
-        if self.set_id is not None:
-            raise Exception("Set already submitted")
-
-        set_response = requests.post(
-            f"{self.base_url}/set",
+        set_response = requests.patch(
+            f"{self.base_url}/set/{self.set_id}/checkin",
             headers=get_headers(),
             json={
-                "appKey": self.app_key,
-                "name": self.name,
-                "isInput": True,
                 "checkins": [checkin.to_dict() for checkin in self.checkins],
             },
             timeout=30,
         )
         handle_http_error(set_response)
-        set_data = json.loads(set_response.content)
-        self.set_id = set_data["id"]
+        self.checkins = []
         return self.set_id
 
 
