@@ -143,7 +143,7 @@ class FileUploader:
         file_system_client = service_client.get_file_system_client("user-storage")
         file_client = file_system_client.get_file_client(file_path)
         file_client.upload_data(file, overwrite=True)
-        return f"https://checkbin.dfs.core.windows.net/user-storage/{file_path}"
+        return f"https://checkbin.blob.core.windows.net/user-storage/{file_path}"
 
     def upload_file_azure(self, container: str, extension: str, file: BufferedReader):
         blob_service_client = BlobServiceClient(
