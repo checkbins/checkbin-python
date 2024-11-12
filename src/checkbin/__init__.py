@@ -682,6 +682,7 @@ class App:
         self,
         checkin_id: Optional[str] = None,
         set_id: Optional[str] = None,
+        run_id: Optional[str] = None,
         json_file: Optional[str] = None,
         csv_file: Optional[str] = None,
         sample_size: Optional[int] = None,
@@ -732,10 +733,20 @@ class App:
             handle_http_error(set_response)
             set = json.loads(set_response.content)
             checkins = set["checkins"]
-            if sample_size is not None:
-                checkins = random.sample(checkins, min(sample_size, len(checkins)))
+        elif run_id is not None:
+            run_inputs_response = requests.get(
+                f"{self.base_url}/run/{run_id}/input",
+                headers=get_headers(),
+                params={"includeState": "true"},
+                timeout=30,
+            )
+            handle_http_error(run_inputs_response)
+            checkins = json.loads(run_inputs_response.content)
         else:
-            raise Exception("Either checkin_id or set_id must be provided")
+            raise Exception("Either checkin_id or set_id or run_id must be provided")
+
+        if len(checkins) > 1 and sample_size is not None:
+            checkins = random.sample(checkins, min(sample_size, len(checkins)))
 
         checkins_dict = {checkin["id"]: checkin for checkin in checkins}
 
