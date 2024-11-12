@@ -4,3 +4,4 @@ dist/
 __pycache__/
 client_build/
 client_db/
+cache/

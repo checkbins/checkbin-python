@@ -12,6 +12,7 @@ import random
 import pickle
 import tempfile
 import traceback
+from pathlib import Path
 from io import BufferedReader
 from contextlib import contextmanager
 from typing import Optional, Any, Tuple, Literal, Generator
@@ -22,12 +23,17 @@ import numpy
 import torch
 import requests
 import boto3
+from tinydb import TinyDB, Query
 from google.cloud import storage
 from azure.storage.blob import BlobServiceClient
 from azure.storage.filedatalake import DataLakeServiceClient
 
 from .utils import with_typehint
 
+current_dir = Path(__file__).parent
+db_dir = Path(current_dir, "cache")
+db_dir.mkdir(exist_ok=True)
+db = TinyDB(db_dir / "db.json")
 
 MediaType = Literal["image", "video"]
 
@@ -550,6 +556,33 @@ class InputSet:
         self.checkins.append(checkin)
         return checkin
 
+    @classmethod
+    def get_file_set_id(cls, file_path: str) -> Optional[str]:
+        file_table = db.table("file")
+        query_result = file_table.search(Query().path == str(file_path))
+        if len(query_result) > 0:
+            file_stats = os.stat(file_path)
+            existing_file = query_result[0]
+            if (
+                existing_file["size"] == file_stats.st_size
+                and existing_file["last_modified"] == file_stats.st_mtime
+            ):
+                return existing_file["set_id"]
+        return None
+
+    @classmethod
+    def cache_file_set_id(cls, file_path: str, set_id: str):
+        file_table = db.table("file")
+        file_stats = os.stat(file_path)
+        file_table.insert(
+            {
+                "path": file_path,
+                "size": file_stats.st_size,
+                "last_modified": file_stats.st_mtime,
+                "set_id": set_id,
+            }
+        )
+
     def create_from_json(
         self,
         json_data: Optional[list[dict[str, Any]]] = None,
@@ -666,11 +699,17 @@ class App:
 
         input_set = None
         if json_file is not None:
-            input_set = self.create_input_set(os.path.basename(json_file))
-            set_id = input_set.create_from_json(json_file=json_file)
+            set_id = InputSet.get_file_set_id(json_file)
+            if set_id is None:
+                input_set = self.create_input_set(os.path.basename(json_file))
+                set_id = input_set.create_from_json(json_file=json_file)
+                InputSet.cache_file_set_id(json_file, set_id)
         elif csv_file is not None:
-            input_set = self.create_input_set(os.path.basename(csv_file))
-            set_id = input_set.create_from_csv(csv_file=csv_file)
+            set_id = InputSet.get_file_set_id(csv_file)
+            if set_id is None:
+                input_set = self.create_input_set(os.path.basename(csv_file))
+                set_id = input_set.create_from_csv(csv_file=csv_file)
+                InputSet.cache_file_set_id(csv_file, set_id)
 
         checkins = []
         if checkin_id is not None:
