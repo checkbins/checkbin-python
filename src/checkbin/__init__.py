@@ -559,7 +559,7 @@ class InputSet:
     @classmethod
     def get_file_set_id(cls, file_path: str) -> Optional[str]:
         file_table = db.table("file")
-        query_result = file_table.search(Query().path == str(file_path))
+        query_result = file_table.search(Query().path == file_path)
         if len(query_result) > 0:
             file_stats = os.stat(file_path)
             existing_file = query_result[0]
@@ -574,14 +574,18 @@ class InputSet:
     def cache_file_set_id(cls, file_path: str, set_id: str):
         file_table = db.table("file")
         file_stats = os.stat(file_path)
-        file_table.insert(
-            {
-                "path": file_path,
-                "size": file_stats.st_size,
-                "last_modified": file_stats.st_mtime,
-                "set_id": set_id,
-            }
-        )
+        file_data = {
+            "path": file_path,
+            "size": file_stats.st_size,
+            "last_modified": file_stats.st_mtime,
+            "set_id": set_id,
+        }
+
+        query_result = file_table.search(Query().path == file_path)
+        if len(query_result) > 0:
+            file_table.update(file_data, Query().path == file_path)
+        else:
+            file_table.insert(file_data)
 
     def create_from_json(
         self,
