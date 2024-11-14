@@ -418,28 +418,67 @@ class Bin(with_typehint(Checkin)):
         parent_id: str,
         base_url: str,
         file_uploader: FileUploader,
-        input_state: Optional[dict[str, Any]] = None,
+        state: Optional[dict[str, Any]] = None,
     ):
         self.test_id = test_id
         self.run_id = run_id
         self.parent_id = parent_id
         self.base_url = base_url
         self.file_uploader = file_uploader
-        self.input_state = input_state
+        self.state = state
+        self.input_state_fetched = False
+        self.input_state = None
         self.checkins: list[Checkin] = []
         self.is_running = False
 
+    def get_data(self, name: str) -> Optional[Any]:
+        if self.state is None or name not in self.state:
+            return None
+        return self.state[name]["data"]
+
+    def get_file_url(self, name: str) -> Optional[str]:
+        if self.state is None or name not in self.state:
+            return None
+        return self.state[name]["url"]
+
+    def get_file(self, name: str) -> Optional[dict[str, Any]]:
+        if self.state is None or name not in self.state:
+            return None
+        return {
+            "url": self.state[name]["url"],
+            "media_type": self.state[name]["mediaType"],
+            "pickle": self.state[name]["pickle"],
+        }
+
+    def get_input_state(self):
+        checkin_input_response = requests.get(
+            f"{self.base_url}/checkin/{self.parent_id}/input",
+            headers=get_headers(),
+            params={"includeState": "true"},
+            timeout=30,
+        )
+        handle_http_error(checkin_input_response)
+        checkin = json.loads(checkin_input_response.content)
+        self.input_state_fetched = True
+        self.input_state = checkin["state"]
+
     def get_input_data(self, name: str) -> Optional[Any]:
+        if not self.input_state_fetched:
+            self.get_input_state()
         if self.input_state is None or name not in self.input_state:
             return None
         return self.input_state[name]["data"]
 
     def get_input_file_url(self, name: str) -> Optional[str]:
+        if not self.input_state_fetched:
+            self.get_input_state()
         if self.input_state is None or name not in self.input_state:
             return None
         return self.input_state[name]["url"]
 
     def get_input_file(self, name: str) -> Optional[dict[str, Any]]:
+        if not self.input_state_fetched:
+            self.get_input_state()
         if self.input_state is None or name not in self.input_state:
             return None
         return {
@@ -783,7 +822,7 @@ class App:
                 parent_id=test["inputCheckinId"],
                 base_url=self.base_url,
                 file_uploader=self.file_uploader,
-                input_state={
+                state={
                     state["name"]: state
                     for state in checkins_dict[test["inputCheckinId"]]["state"]
                 },
