@@ -28,6 +28,7 @@ from google.cloud import storage
 from azure.storage.blob import BlobServiceClient
 from azure.storage.filedatalake import DataLakeServiceClient
 
+
 from .utils import with_typehint
 
 current_dir = Path(__file__).parent
@@ -446,7 +447,7 @@ class Bin(with_typehint(Checkin)):
             return None
         return {
             "url": self.state[name]["url"],
-            "media_type": self.state[name]["mediaType"],
+            "media_type": self.state[name]["media_type"],
             "pickle": self.state[name]["pickle"],
         }
 
@@ -465,27 +466,38 @@ class Bin(with_typehint(Checkin)):
     def get_input_data(self, name: str) -> Optional[Any]:
         if not self.input_state_fetched:
             self.get_input_state()
-        if self.input_state is None or name not in self.input_state:
+        if self.input_state is None:
             return None
-        return self.input_state[name]["data"]
+        for item in self.input_state:
+            print(item)
+            if item.get("name") == name:
+                print("Got it!", item.get("data"))
+                return item.get("data")
+        return None
 
     def get_input_file_url(self, name: str) -> Optional[str]:
         if not self.input_state_fetched:
             self.get_input_state()
-        if self.input_state is None or name not in self.input_state:
+        if self.input_state is None:
             return None
-        return self.input_state[name]["url"]
+        for item in self.input_state:
+            if item.get("name") == name:
+                return item.get("url")
+        return None
 
     def get_input_file(self, name: str) -> Optional[dict[str, Any]]:
         if not self.input_state_fetched:
             self.get_input_state()
-        if self.input_state is None or name not in self.input_state:
+        if self.input_state is None:
             return None
-        return {
-            "url": self.input_state[name]["url"],
-            "media_type": self.input_state[name]["mediaType"],
-            "pickle": self.input_state[name]["pickle"],
-        }
+        for item in self.input_state:
+            if item.get("name") == name:
+                return {
+                    "url": item.get("url"),
+                    "media_type": item.get("mediaType"),
+                    "pickle": item.get("pickle"),
+                }
+        return None
 
     def checkin(
         self,
