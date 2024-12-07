@@ -481,9 +481,7 @@ class Bin(with_typehint(Checkin)):
         if self.input_state is None:
             return None
         for item in self.input_state:
-            print(item)
             if item.get("name") == name:
-                print("Got it!", item.get("data"))
                 return item.get("data")
         return None
 
