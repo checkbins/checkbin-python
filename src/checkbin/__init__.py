@@ -28,7 +28,6 @@ from google.cloud import storage
 from azure.storage.blob import BlobServiceClient
 from azure.storage.filedatalake import DataLakeServiceClient
 
-
 from .utils import with_typehint
 
 current_dir = Path(__file__).parent
@@ -460,7 +459,7 @@ class Bin(with_typehint(Checkin)):
             return None
         return {
             "url": self.state[name]["url"],
-            "media_type": self.state[name]["media_type"],
+            "media_type": self.state[name]["mediaType"],
             "pickle": self.state[name]["pickle"],
         }
 
