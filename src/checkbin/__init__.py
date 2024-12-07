@@ -201,6 +201,7 @@ class Checkin:
         self.name = name
         self.state_names = set()
         self.state = None
+        self.evals = None
         self.files = None
         self.run_id = run_id
         self.set_id = set_id
@@ -233,6 +234,7 @@ class Checkin:
         return {
             "name": self.name,
             "state": self.state,
+            "evals": self.evals,
             "files": self.files,
         }
 
@@ -252,6 +254,17 @@ class Checkin:
             self.state = {}
         name = self.__get_state_name(name)
         self.state[name] = state
+        self.state_names.add(name)
+
+    def add_eval(self, name: str, eval: int | float | bool):
+        if not isinstance(eval, (int, float, bool)):
+            print(f"Checkbin: WARNING unsupported eval type: {type(eval).__name__}")
+        if self.evals is None:
+            self.evals = {}
+        name = self.__get_state_name(name)
+        self.evals[name] = {
+            "data": eval,
+        }
         self.state_names.add(name)
 
     def add_file(
