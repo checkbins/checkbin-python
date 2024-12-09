@@ -426,14 +426,14 @@ class Checkin:
 class Bin(with_typehint(Checkin)):
     def __init__(
         self,
-        test_id: str,
+        trace_id: str,
         run_id: str,
         parent_id: str,
         base_url: str,
         file_uploader: FileUploader,
         state: Optional[dict[str, Any]] = None,
     ):
-        self.test_id = test_id
+        self.trace_id = trace_id
         self.run_id = run_id
         self.parent_id = parent_id
         self.base_url = base_url
@@ -507,13 +507,13 @@ class Bin(with_typehint(Checkin)):
         self.checkins.append(Checkin(self.file_uploader, name, self.run_id))
 
         if not self.is_running:
-            test_response = requests.patch(
-                f"{self.base_url}/test/{self.test_id}",
+            trace_response = requests.patch(
+                f"{self.base_url}/trace/{self.trace_id}",
                 headers=get_headers(),
                 json={"status": "running"},
                 timeout=30,
             )
-            handle_http_error(test_response)
+            handle_http_error(trace_response)
             self.is_running = True
 
     def submit(self):
@@ -529,17 +529,17 @@ class Bin(with_typehint(Checkin)):
         )
         handle_http_error(create_response)
 
-        test_response = requests.patch(
-            f"{self.base_url}/test/{self.test_id}",
+        trace_response = requests.patch(
+            f"{self.base_url}/trace/{self.trace_id}",
             headers=get_headers(),
             json={"status": "completed"},
             timeout=30,
         )
-        handle_http_error(test_response)
+        handle_http_error(trace_response)
 
     def failure(self, error_name: str, error_message: str, error_stack: str):
-        test_response = requests.patch(
-            f"{self.base_url}/test/{self.test_id}",
+        trace_response = requests.patch(
+            f"{self.base_url}/trace/{self.trace_id}",
             headers=get_headers(),
             json={
                 "status": "failed",
@@ -549,7 +549,7 @@ class Bin(with_typehint(Checkin)):
             },
             timeout=30,
         )
-        handle_http_error(test_response)
+        handle_http_error(trace_response)
 
     def __getattr__(self, name):
         if len(self.checkins) == 0:
@@ -813,31 +813,31 @@ class App:
                 for checkin in checkins
             ]
 
-        tests_response = requests.post(
-            f"{self.base_url}/test",
+        traces_response = requests.post(
+            f"{self.base_url}/trace",
             headers=get_headers(),
             json={
                 "runId": run_id,
-                "tests": [{"inputCheckinId": checkin["id"]} for checkin in checkins],
+                "traces": [{"inputCheckinId": checkin["id"]} for checkin in checkins],
             },
             timeout=30,
         )
-        handle_http_error(tests_response)
-        tests = json.loads(tests_response.content)
+        handle_http_error(traces_response)
+        traces = json.loads(traces_response.content)
 
-        print(f"Checkbin: started run {run_id} with {len(tests)} tests")
+        print(f"Checkbin: started run {run_id} with {len(traces)} traces")
 
         bins = []
-        for test in tests:
+        for trace in traces:
             bin = Bin(
-                test_id=test["id"],
+                trace_id=trace["id"],
                 run_id=run_id,
-                parent_id=test["inputCheckinId"],
+                parent_id=trace["inputCheckinId"],
                 base_url=self.base_url,
                 file_uploader=self.file_uploader,
                 state={
                     state["name"]: state
-                    for state in checkins_dict[test["inputCheckinId"]]["state"]
+                    for state in checkins_dict[trace["inputCheckinId"]]["state"]
                 },
             )
             bins.append(bin)

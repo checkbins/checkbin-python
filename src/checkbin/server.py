@@ -192,9 +192,9 @@ def get_runs():
 
 def get_checkin_ancestors(checkins: list[dict], include_state: bool):
     checkin_table = db.table("checkin")
-    tests = []
+    traces = []
     for output_checkin in checkins:
-        test = []
+        trace = []
         current_checkin = output_checkin
         while current_checkin is not None:
             if include_state:
@@ -209,7 +209,7 @@ def get_checkin_ancestors(checkins: list[dict], include_state: bool):
                     "updatedAt": datetime.now().isoformat(),
                 }
             )
-            test.insert(0, current_checkin)
+            trace.insert(0, current_checkin)
             parent_checkin = checkin_table.search(
                 Query().id == current_checkin["parentId"]
             )
@@ -218,8 +218,8 @@ def get_checkin_ancestors(checkins: list[dict], include_state: bool):
             else:
                 parent_checkin = parent_checkin[0].copy()
                 current_checkin = parent_checkin
-        tests.append(test)
-    return tests
+        traces.append(trace)
+    return traces
 
 
 def get_run_by_id(
@@ -272,54 +272,54 @@ def create_run(body: PostRun):
     return new_run
 
 
-# Test
-@app.get("/test")
-def get_test(runId: str):
-    test_table = db.table("test")
-    return test_table.search(Query().runId == runId)
+# Trace
+@app.get("/trace")
+def get_trace(runId: str):
+    trace_table = db.table("trace")
+    return trace_table.search(Query().runId == runId)
 
 
-class Test(BaseModel):
+class Trace(BaseModel):
     inputCheckinId: str
     status: Literal["pending", "running", "completed", "failed"] = "pending"
 
 
-class PostTests(BaseModel):
+class PostTraces(BaseModel):
     runId: str
-    tests: list[Test]
+    traces: list[Trace]
 
 
-@app.post("/test")
-def create_tests(body: PostTests):
-    test_table = db.table("test")
-    for test in body.tests:
-        test_table.insert(
+@app.post("/trace")
+def create_traces(body: PostTraces):
+    trace_table = db.table("trace")
+    for trace in body.traces:
+        trace_table.insert(
             {
                 "id": str(uuid.uuid4()),
                 "runId": body.runId,
-                "inputCheckinId": test.inputCheckinId,
-                "status": test.status,
+                "inputCheckinId": trace.inputCheckinId,
+                "status": trace.status,
                 "createdAt": datetime.now().isoformat(),
                 "updatedAt": datetime.now().isoformat(),
             }
         )
-    return test_table.search(Query().runId == body.runId)
+    return trace_table.search(Query().runId == body.runId)
 
 
-class PatchTest(BaseModel):
+class PatchTrace(BaseModel):
     status: Literal["pending", "running", "completed", "failed"]
 
 
-@app.patch("/test/{testId}")
-def update_test(testId: str, body: PatchTest):
-    test_table = db.table("test")
-    ids = test_table.update(
+@app.patch("/trace/{traceId}")
+def update_trace(traceId: str, body: PatchTrace):
+    trace_table = db.table("trace")
+    ids = trace_table.update(
         {
             "status": body.status,
             "updatedAt": datetime.now().isoformat(),
         },
-        Query().id == testId,
+        Query().id == traceId,
     )
     if len(ids) == 0:
-        raise HTTPException(status_code=404, detail=f"No test found with id {testId}")
-    return test_table.get(doc_id=ids[0])
+        raise HTTPException(status_code=404, detail=f"No trace found with id {traceId}")
+    return trace_table.get(doc_id=ids[0])
