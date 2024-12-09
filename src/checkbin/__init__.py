@@ -473,41 +473,32 @@ class Bin(with_typehint(Checkin)):
         handle_http_error(checkin_input_response)
         checkin = json.loads(checkin_input_response.content)
         self.input_state_fetched = True
-        self.input_state = checkin["state"]
+        self.input_state = {state["name"]: state for state in checkin["state"]}
 
     def get_input_data(self, name: str) -> Optional[Any]:
         if not self.input_state_fetched:
             self.get_input_state()
-        if self.input_state is None:
+        if self.input_state is None or name not in self.input_state:
             return None
-        for item in self.input_state:
-            if item.get("name") == name:
-                return item.get("data")
-        return None
+        return self.input_state[name]["data"]
 
     def get_input_file_url(self, name: str) -> Optional[str]:
         if not self.input_state_fetched:
             self.get_input_state()
-        if self.input_state is None:
+        if self.input_state is None or name not in self.input_state:
             return None
-        for item in self.input_state:
-            if item.get("name") == name:
-                return item.get("url")
-        return None
+        return self.input_state[name]["url"]
 
     def get_input_file(self, name: str) -> Optional[dict[str, Any]]:
         if not self.input_state_fetched:
             self.get_input_state()
-        if self.input_state is None:
+        if self.input_state is None or name not in self.input_state:
             return None
-        for item in self.input_state:
-            if item.get("name") == name:
-                return {
-                    "url": item.get("url"),
-                    "media_type": item.get("mediaType"),
-                    "pickle": item.get("pickle"),
-                }
-        return None
+        return {
+            "url": self.input_state[name]["url"],
+            "media_type": self.input_state[name]["mediaType"],
+            "pickle": self.input_state[name]["pickle"],
+        }
 
     def checkin(
         self,
