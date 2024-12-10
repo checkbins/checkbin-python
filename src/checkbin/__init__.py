@@ -28,6 +28,7 @@ from google.cloud import storage
 from azure.storage.blob import BlobServiceClient
 from azure.storage.filedatalake import DataLakeServiceClient
 
+from .__about__ import __version__
 from .utils import with_typehint
 
 current_dir = Path(__file__).parent
@@ -703,6 +704,17 @@ class App:
             self.base_url = f"http://localhost:{port}"
         else:
             self.base_url = CHECKBIN_REMOTE_URL
+            package_response = requests.get(
+                f"{self.base_url}/public/package/status",
+                headers=get_headers(),
+                params={"manager": "pip", "name": "checkbin", "version": __version__},
+                timeout=30,
+            )
+            handle_http_error(package_response)
+            package_data = json.loads(package_response.content)
+            if "message" in package_data:
+                self.package_status_message = package_data["message"]
+
         self.file_uploader = FileUploader(app_key=app_key, mode=mode)
 
     def add_azure_credentials(self, account_name: str, account_key: str):
@@ -726,6 +738,9 @@ class App:
         )
 
     def create_input_set(self, name: str) -> InputSet:
+        if self.package_status_message is not None:
+            print(self.package_status_message)
+
         return InputSet(
             app_key=self.app_key,
             base_url=self.base_url,
@@ -744,6 +759,9 @@ class App:
         sample_size: Optional[int] = None,
         duplicate_factor: Optional[int] = None,
     ) -> Generator[Checkbin, None, None]:
+        if self.package_status_message is not None:
+            print(self.package_status_message)
+
         run_response = requests.post(
             f"{self.base_url}/run",
             headers=get_headers(),
