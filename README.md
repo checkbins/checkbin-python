@@ -34,7 +34,7 @@ Introducing Checkbin, an visualization SDK focused on speed and simplicity. Foll
 
 To get started, create a Checkbin account with the link below. All you need is an email.
 
-[Signup](https://app.checkbin.dev/signup)
+[Signup](https://app.checkbin.dev/sign-up)
 
 After you've created your account, make your first app! This is as simple as clicking the "Create App" button on your dashboard. After your app is created, you'll want to copy your app key for use in the SDK later.
 
