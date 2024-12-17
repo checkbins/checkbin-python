@@ -751,6 +751,7 @@ class App:
     @contextmanager
     def start_run(
         self,
+        name: Optional[str] = None,
         checkin_id: Optional[str] = None,
         set_id: Optional[str] = None,
         run_id: Optional[str] = None,
@@ -765,7 +766,7 @@ class App:
         run_response = requests.post(
             f"{self.base_url}/run",
             headers=get_headers(),
-            json={"appKey": self.app_key},
+            json={"appKey": self.app_key, "name": name},
             timeout=30,
         )
         handle_http_error(run_response)
