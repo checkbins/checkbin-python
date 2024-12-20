@@ -700,6 +700,7 @@ class App:
         port: int = 8000,
     ):
         self.app_key = app_key
+        self.package_status_message = None
         if mode == "local":
             self.base_url = f"http://localhost:{port}"
         else:
