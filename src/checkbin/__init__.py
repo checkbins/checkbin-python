@@ -679,7 +679,7 @@ class InputSet:
         return self.submit()
 
     def submit(self):
-        set_response = requests.patch(
+        set_response = requests.post(
             f"{self.base_url}/set/{self.set_id}/checkin",
             headers=get_headers(),
             json={
