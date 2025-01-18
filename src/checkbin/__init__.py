@@ -691,6 +691,53 @@ class InputSet:
         self.checkins = []
         return self.set_id
 
+class BinFactory:
+    def __init__(self, app_key: str, run_id: str, base_url: str, file_uploader: FileUploader):
+        self.app_key = app_key
+        self.run_id = run_id
+        self.base_url = base_url
+        self.file_uploader = file_uploader
+
+    def get_bin(self, input_state: dict[str, Any], input_files: dict[str, Any]) -> Bin:
+        input_checkin_response = requests.post(
+             f"{self.base_url}/checkin/input",
+             headers=get_headers(),
+             json={
+                 "appKey": self.app_key,
+                 "runId": self.run_id,
+                 "state": input_state,
+                 "files": input_files,
+             },
+             timeout=30,
+        )
+        handle_http_error(input_checkin_response)
+        input_checkin = json.loads(input_checkin_response.content)
+        # print(input_checkin)
+
+        tests_response = requests.post(
+            f"{self.base_url}/trace",
+            headers=get_headers(),
+            json={
+                "runId": self.run_id,
+                "traces": [{"inputCheckinId": input_checkin["id"]}],
+            },
+            timeout=30,
+        )
+        print(tests_response)
+        handle_http_error(tests_response)
+        tests = json.loads(tests_response.content)
+    
+        return Bin(
+            trace_id=tests[0]["id"],
+            run_id=self.run_id,
+            parent_id=input_checkin["id"],
+            base_url=self.base_url,
+            file_uploader=self.file_uploader,
+            state={
+                # state["name"]: state
+                # for state in input_checkin["state"]
+            },
+        )
 
 class App:
     def __init__(
@@ -749,6 +796,24 @@ class App:
             name=name,
         )
 
+
+    def create_bin_factory(
+        self, 
+        run_name: Optional[str] = None,
+    ) -> BinFactory:
+        run_response = requests.post(
+            f"{self.base_url}/run",
+            headers=get_headers(),
+            json={"appKey": self.app_key, **({"name": run_name} if run_name is not None else {})},
+            timeout=30,
+        )
+        handle_http_error(run_response)
+        run_data = json.loads(run_response.content)
+        run_id = run_data["id"]
+
+        return BinFactory(app_key=self.app_key, run_id=run_id, base_url=self.base_url, file_uploader=self.file_uploader)
+        
+        
     @contextmanager
     def start_run(
         self,
