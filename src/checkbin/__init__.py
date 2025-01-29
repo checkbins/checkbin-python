@@ -505,7 +505,7 @@ class Bin(with_typehint(Checkin)):
         self,
         name: str,
     ):
-        self.checkins.append(Checkin(self.file_uploader, name, self.run_id))
+        self.checkins.append(Checkin(self.file_uploader, name, run_id=self.run_id))
 
         if not self.is_running:
             trace_response = requests.patch(
@@ -605,7 +605,7 @@ class InputSet:
         self.set_id = set_data["id"]
 
     def add_input(self):
-        checkin = Checkin(self.file_uploader, "Input")
+        checkin = Checkin(self.file_uploader, "Input", set_id=self.set_id)
         self.checkins.append(checkin)
         return checkin
 
