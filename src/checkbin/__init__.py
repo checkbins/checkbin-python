@@ -518,6 +518,9 @@ class Bin(with_typehint(Checkin)):
             self.is_running = True
 
     def submit(self):
+        if len(self.checkins) == 0:
+            raise Exception("No checkins added")
+
         create_response = requests.post(
             f"{self.base_url}/checkin",
             headers=get_headers(),
