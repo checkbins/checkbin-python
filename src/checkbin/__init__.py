@@ -31,6 +31,13 @@ from azure.storage.filedatalake import DataLakeServiceClient
 from .__about__ import __version__
 from .utils import with_typehint
 
+__all__ = [
+    # Original names
+    'Checkbin', 'Checkin', 'Bin', 'BinFactory',
+    # New intuitive names
+    'Grid', 'Column', 'Row', 'RowFactory',
+]
+
 current_dir = Path(__file__).parent
 db_dir = Path(current_dir, "cache")
 db_dir.mkdir(exist_ok=True)
@@ -563,6 +570,26 @@ class Bin(with_typehint(Checkin)):
         return getattr(self.checkins[-1], name)
 
 
+# More intuitive aliases for the main classes
+Column = Checkin
+Row = Bin
+
+class Grid:
+    def __init__(self, rows: list[Row]):
+        self.length = len(rows)
+        self.rows = iter(rows)
+        self.current_row = None
+
+    def __len__(self):
+        return self.length
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.current_row = next(self.rows)
+        return self.current_row
+
 class Checkbin:
     def __init__(self, bins: list[Bin]):
         self.length = len(bins)
@@ -695,6 +722,52 @@ class InputSet:
         return self.set_id
 
 
+# More intuitive factory class that parallels BinFactory
+class RowFactory:
+    def __init__(
+        self, app_key: str, run_id: str, base_url: str, file_uploader: FileUploader
+    ):
+        self.app_key = app_key
+        self.run_id = run_id
+        self.base_url = base_url
+        self.file_uploader = file_uploader
+
+    def get_row(self, input_state: dict[str, Any], input_files: dict[str, Any]) -> Row:
+        input_checkin_response = requests.post(
+            f"{self.base_url}/checkin/input",
+            headers=get_headers(),
+            json={
+                "appKey": self.app_key,
+                "runId": self.run_id,
+                "state": input_state,
+                "files": input_files,
+            },
+            timeout=30,
+        )
+        handle_http_error(input_checkin_response)
+        input_checkin = json.loads(input_checkin_response.content)
+
+        tests_response = requests.post(
+            f"{self.base_url}/trace",
+            headers=get_headers(),
+            json={
+                "runId": self.run_id,
+                "traces": [{"inputCheckinId": input_checkin["id"]}],
+            },
+            timeout=30,
+        )
+        handle_http_error(tests_response)
+        test = json.loads(tests_response.content)[0]
+
+        return Row(
+            trace_id=test["id"],
+            run_id=self.run_id,
+            parent_id=input_checkin["id"],
+            base_url=self.base_url,
+            file_uploader=self.file_uploader,
+            state=input_checkin.get("state"),
+        )
+
 class BinFactory:
     def __init__(
         self, app_key: str, run_id: str, base_url: str, file_uploader: FileUploader
@@ -799,6 +872,31 @@ class App:
             name=name,
         )
 
+    def create_row_factory(
+        self,
+        run_name: Optional[str] = None,
+    ) -> RowFactory:
+        """Create a factory for generating rows in the comparison grid. More intuitive alias for create_bin_factory."""
+        run_response = requests.post(
+            f"{self.base_url}/run",
+            headers=get_headers(),
+            json={
+                "appKey": self.app_key,
+                **({"name": run_name} if run_name is not None else {}),
+            },
+            timeout=30,
+        )
+        handle_http_error(run_response)
+        run_data = json.loads(run_response.content)
+        run_id = run_data["id"]
+
+        return RowFactory(
+            app_key=self.app_key,
+            run_id=run_id,
+            base_url=self.base_url,
+            file_uploader=self.file_uploader,
+        )
+
     def create_bin_factory(
         self,
         run_name: Optional[str] = None,
@@ -822,6 +920,33 @@ class App:
             base_url=self.base_url,
             file_uploader=self.file_uploader,
         )
+
+    @contextmanager
+    def create_rows(
+        self,
+        name: Optional[str] = None,
+        checkin_id: Optional[str] = None,
+        set_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        json_file: Optional[str] = None,
+        csv_file: Optional[str] = None,
+        sample_size: Optional[int] = None,
+        duplicate_factor: Optional[int] = None,
+    ) -> Generator[Grid, None, None]:
+        """Create rows in the comparison grid. More intuitive alias for start_run."""
+        with self.start_run(
+            name=name,
+            checkin_id=checkin_id,
+            set_id=set_id,
+            run_id=run_id,
+            json_file=json_file,
+            csv_file=csv_file,
+            sample_size=sample_size,
+            duplicate_factor=duplicate_factor,
+        ) as checkbin:
+            # Convert Checkbin to Grid
+            grid = Grid([Row(b.trace_id, b.run_id, b.parent_id, b.base_url, b.file_uploader, b.state) for b in checkbin.bins])
+            yield grid
 
     @contextmanager
     def start_run(

@@ -26,7 +26,7 @@ pip install checkbin
 
 ## Introduction
 
-Introducing Checkbin, an visualization SDK focused on speed and simplicity. Follow our guide below to run your first trace.
+Introducing Checkbin, a visualization SDK focused on speed and simplicity. Checkbin helps you create comparison grids directly from your code, eliminating the need for manual image editing tools. Follow our guide below to create your first comparison grid.
 
 ## Getting Started
 
@@ -50,7 +50,7 @@ pip install checkbin
 
 You'll want to use your account token and app key from earlier to initialize the SDK.
 
-```
+```python
 import checkbin
 
 checkbin.authenticate(token=os.environ["CHECKBIN_TOKEN"])
@@ -60,107 +60,146 @@ checkbin_app = checkbin.App(app_key="my_first_app")
 
 ## Concepts
 
-### Trace
+### The Comparison Grid
 
-A trace is a single execution of your application. A trace has inputs, passes a series of checkins, and ends with an output. It is the fundamental unit of observation in Checkbin.
+At its core, Checkbin helps you create comparison grids. Think of it like a spreadsheet where:
+- Each row represents a different input or test case
+- Each column represents a step in your process
+- Each cell can contain images, data, or other variables you want to track
 
-### Checkins
+### Rows (formerly Bins)
 
-If a trace follows a path through your application, checkins are the guide markers along the way. You'll place checkins at critical junctures in your code where it's important to record the current state.
+A row represents a single test case or input in your comparison grid. Each row follows a path through your application, collecting data and images at each step. You'll create rows for each input you want to analyze.
+
+### Columns (formerly Checkins)
+
+If a row represents a path through your application, columns are the checkpoints along that path. You place columns at critical points in your code where you want to record the current state, images, or other data.
 
 ### Sets
 
-Of course, it's not enough to trace your application with just one input. That's where sets come in. Sets are a simple way to query many inputs at once to run through your application.
+Sets are collections of inputs that you want to analyze together. When you create a grid, you'll typically use a set to define what inputs should be processed (i.e., what rows should be created).
 
-### Run
+### Grid (formerly Run)
 
-A run is a collection of traces. You'll use runs to observe the behavior of your application across many inputs and isolate failure cases.
+A grid is the complete visualization of your analysis. It contains all the rows (test cases) and their corresponding columns (checkpoints), giving you a comprehensive view of how your application behaves across different inputs.
 
 ## Integration
 
-### Create a input set
+### Create an input set
 
-In order to run your first trace, you'll need an input set. Any valid JSON can be used to create your set. Files are a special kind of input data that can be visualized in our run explorer later.
+Before creating your comparison grid, you'll need an input set. This defines what rows will appear in your grid. Any valid JSON can be used to create your set. Files are a special kind of input data that can be visualized in our grid explorer later.
 
 [Create Set](https://app.checkbin.dev/dashboard/input-sets)
 
-If you prefer to create your sets programmatically, our SDK has you covered.
+If you prefer to create your sets programmatically, our SDK has you covered:
 
-```
+```python
 set = checkbin_app.create_input_set(name="My First Input Set")
 
-for row in input_data:
+for input_data in dataset:
     new_input = set.add_input()
-    new_input.add_state(key="model_blend", value=row.model_blend)
-    new_input.add_file(key="url", url=row.file_url)
+    new_input.add_state(key="model_blend", value=input_data.model_blend)
+    new_input.add_file(key="url", url=input_data.file_url)
 
 set_id = set.submit()
 ```
 
-Even simpler still, you can invoke the `start_run` method in the next section with a path to a CSV or JSON file. We'll take care of the rest.
+Even simpler still, you can invoke the `create_rows` method in the next section with a path to a CSV or JSON file. We'll take care of the rest.
 
-### Bins
+### Creating Rows
 
-Once you've created your set, copy the set id. You'll use this to initialize your first run. Runs are executed in a context manager. This allows us to track trace failures and log error messages.
+Once you've created your set, copy the set id. You'll use this to initialize your comparison grid. Grids are created in a context manager, which allows us to track failures and log error messages.
 
-```
-with checkbin_app.start_run(set_id="a46dab01-7a79-4eef-ab0c-2131d6ff92b2") as bins:
-```
-
-After you start a run, you'll receive a list of objects called bins. Think of each bin as the state manager for a single trace. You'll use your bin to query input data, mark checkins, and submit your trace.
-
-```
-for bin in bins:
-    model_blend = bin.get_input_data("model_blend")
-    file_url = bin.get_input_file_url("file")
-
-    your_app.main(model_blend=model_blend, file_url=file_url, bin=bin)
-
+```python
+with checkbin_app.create_rows(set_id="a46dab01-7a79-4eef-ab0c-2131d6ff92b2") as grid:
 ```
 
-### Checkins
+After you start creating the grid, you'll receive a list of row objects. Each row manages the state for a single test case. You'll use your row to query input data, add columns, and record state.
 
-Checkins are the backbone of your traces in Checkbin. They allow you to mark the state of your application at a particular juncture. We've designed our SDK to make checkins simple to use. To create a checkin, simply name it.
+```python
+for row in grid:
+    # Get input data for this row
+    model_blend = row.get_input_data("model_blend")
+    file_url = row.get_input_file_url("file")
 
-```
-bin.checkin(name="My First Checkin")
-```
-
-From this point onwards, you can think of your bin as state storage for that checkin. If there's a state you want to store in "My First Checkin", just call one of our two state helper functions.
-
-```
-bin.add_state(name="model_param_1", value=model_param_1)
+    # Process the input and record results
+    your_app.main(model_blend=model_blend, file_url=file_url, row=row)
 ```
 
-Remember, files are a special kind of input data that can be visualized in our run explorer later.
+### Creating Columns
 
-```
-bin.add_file(name="intermediate_image", url=file_url)
-```
+Columns are the backbone of your comparison grid. They allow you to mark the state of your application at particular points. Creating a column is as simple as naming it:
 
-Copying the same upload code over and over can be a hassle. We've got you covered. Your Checkbin account automatically comes with 5GB of cloud storage. Just call `upload_file` from your bin.
-
-```
-bin.upload_file(name="my-file", file_path="path/to/file")
+```python
+row.checkin(name="Step 1: Initial Processing")
 ```
 
-In our projects, we've found ourselves reusing code to upload Python images as files, so we've added a helper function for that too.
+From this point onwards, you can think of your row as state storage for that column. If there's data you want to store in "Step 1", just call one of our state helper functions:
 
-```
-bin.upload_image(name="image-mask", image=pil_image)
-```
-
-Once you're finished with your first checkin and are ready for the next, create another just as before. Checkbin will handle the rest.
-
-```
-bin.checkin(name="My Second Checkin")
-bin.add_state(name="model_param_2", value=model_param_2)
+```python
+row.add_state(name="model_param_1", value=model_param_1)
 ```
 
-### Submitting your trace
+Files (like images) are a special kind of data that can be visualized in our grid explorer:
 
-The final step for your first trace is submission. Once you've added all of the states you want for your final checkin, simply call `submit`. It's that simple!
+```python
+row.add_file(name="intermediate_image", url=file_url)
+```
 
+Copying the same upload code over and over can be a hassle. We've got you covered. Your Checkbin account automatically comes with 5GB of cloud storage. Just call `upload_file` from your row:
+
+```python
+row.upload_file(name="my-file", file_path="path/to/file")
 ```
-bin.submit()
+
+For Python images, we've added a special helper:
+
+```python
+row.upload_image(name="image-mask", image=pil_image)
 ```
+
+When you're ready to move to the next column, simply create another one just as before:
+
+```python
+row.checkin(name="Step 2: Final Output")
+row.add_state(name="model_param_2", value=model_param_2)
+```
+
+### Submitting your grid
+
+The final step is submission. Once you've added all the data you want for your final column, simply call `submit`:
+
+```python
+row.submit()
+```
+
+### Alternative: Using Factories
+
+If you need more control over row creation, you can use the row factory pattern:
+
+```python
+# Create a factory for generating rows
+factory = app.create_row_factory(run_name="My Analysis")
+
+# Create a row with specific input state
+row = factory.get_row(
+    input_state={"model_blend": 0.5},
+    input_files={"image": "https://example.com/input.jpg"}
+)
+
+# Process the row as before
+row.checkin(name="Step 1")
+row.add_state(name="output", value=result)
+row.submit()
+```
+
+## Legacy API
+
+Note: For backward compatibility, all the original method names are still available:
+- `Grid` was formerly called `Checkbin`
+- `Row` was formerly called `Bin`
+- `Column` was formerly called `Checkin`
+- `create_rows()` was formerly called `start_run()`
+- `create_row_factory()` was formerly called `create_bin_factory()`
+
+The original names will continue to work, but we recommend using the new, more intuitive names for better code readability.
