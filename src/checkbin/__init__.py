@@ -35,7 +35,7 @@ __all__ = [
     # Original names
     'Checkbin', 'Checkin', 'Bin', 'BinFactory',
     # New intuitive names
-    'Grid', 'Column', 'Row', 'RowFactory',
+    'Rows', 'Column', 'Row', 'RowFactory',
 ]
 
 current_dir = Path(__file__).parent
@@ -574,7 +574,7 @@ class Bin(with_typehint(Checkin)):
 Column = Checkin
 Row = Bin
 
-class Grid:
+class Rows:
     def __init__(self, rows: list[Row]):
         self.length = len(rows)
         self.rows = iter(rows)
@@ -932,7 +932,7 @@ class App:
         csv_file: Optional[str] = None,
         sample_size: Optional[int] = None,
         duplicate_factor: Optional[int] = None,
-    ) -> Generator[Grid, None, None]:
+    ) -> Generator[Rows, None, None]:
         """Create rows in the comparison grid. More intuitive alias for start_run."""
         with self.start_run(
             name=name,
@@ -944,9 +944,9 @@ class App:
             sample_size=sample_size,
             duplicate_factor=duplicate_factor,
         ) as checkbin:
-            # Convert Checkbin to Grid
-            grid = Grid([Row(b.trace_id, b.run_id, b.parent_id, b.base_url, b.file_uploader, b.state) for b in checkbin.bins])
-            yield grid
+            # Convert Checkbin to Rows
+            rows = Rows([Row(b.trace_id, b.run_id, b.parent_id, b.base_url, b.file_uploader, b.state) for b in checkbin.bins])
+            yield rows
 
     @contextmanager
     def start_run(

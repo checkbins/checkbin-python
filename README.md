@@ -79,9 +79,9 @@ If a row represents a path through your application, columns are the checkpoints
 
 Sets are collections of inputs that you want to analyze together. When you create a grid, you'll typically use a set to define what inputs should be processed (i.e., what rows should be created).
 
-### Grid (formerly Run)
+### Rows (formerly Run)
 
-A grid is the complete visualization of your analysis. It contains all the rows (test cases) and their corresponding columns (checkpoints), giving you a comprehensive view of how your application behaves across different inputs.
+A Rows object represents a collection of test cases in your analysis. Each Row represents a different input or test case, and each Column represents a checkpoint in your process. Together, they form a comparison grid that gives you a comprehensive view of how your application behaves across different inputs.
 
 ## Integration
 
@@ -111,13 +111,13 @@ Even simpler still, you can invoke the `create_rows` method in the next section 
 Once you've created your set, copy the set id. You'll use this to initialize your comparison grid. Grids are created in a context manager, which allows us to track failures and log error messages.
 
 ```python
-with checkbin_app.create_rows(set_id="a46dab01-7a79-4eef-ab0c-2131d6ff92b2") as grid:
+with checkbin_app.create_rows(set_id="a46dab01-7a79-4eef-ab0c-2131d6ff92b2") as rows:
 ```
 
-After you start creating the grid, you'll receive a list of row objects. Each row manages the state for a single test case. You'll use your row to query input data, add columns, and record state.
+After you create the rows, you'll receive a collection of row objects. Each row manages the state for a single test case. You'll use your row to query input data, add columns, and record state.
 
 ```python
-for row in grid:
+for row in rows:
     # Get input data for this row
     model_blend = row.get_input_data("model_blend")
     file_url = row.get_input_file_url("file")
@@ -196,7 +196,7 @@ row.submit()
 ## Legacy API
 
 Note: For backward compatibility, all the original method names are still available:
-- `Grid` was formerly called `Checkbin`
+- `Rows` was formerly called `Checkbin`
 - `Row` was formerly called `Bin`
 - `Column` was formerly called `Checkin`
 - `create_rows()` was formerly called `start_run()`
